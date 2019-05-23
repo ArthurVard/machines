@@ -10,10 +10,20 @@
       ./hardware-configuration.nix
       ./nix-configs/users.nix
       ./nix-configs/xserver.nix
+      ./nix-configs/fonts.nix
+      ./nix-configs/private-ssh-pipe.nix
       ./nix-configs/applications
-      ./nix-configs/syncthing.nix
+      # ./nix-configs/syncthing.nix
 
     ];
+
+
+   services.private-ssh-pipe.enable = true;
+   services.private-ssh-pipe.user = "arthur";
+   
+
+   services.syncthing.enable = true;
+
 
    nixpkgs.config = {
     allowUnfree = true;
@@ -63,7 +73,7 @@ fileSystems."/".options = [ "noatime" "nodiratime" "discard" ];
   # List packages installed in system profile. To search, run:
   # $ nix search wget
    environment.systemPackages = with pkgs; [
-   kate  htop wget vim emacs chromium
+   kate  htop wget vim emacs chromium mc 
    ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -116,6 +126,20 @@ fileSystems."/".options = [ "noatime" "nodiratime" "discard" ];
 
   security.sudo.enable = true;
 
+
+  # Set up nix caches - https://github.com/obsidiansystems/obelisk
+  nix.binaryCaches = [ "https://cache.nixos.org" "https://nixcache.reflex-frp.org" "https://hydra.iohk.io"];
+  nix.binaryCachePublicKeys = [ "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI=" "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="];
+
+
+#  nix.binaryCaches = [ "https://cache.nixos.org" "https://nixcache.reflex-frp.org" "ssh://nix-ssh@cache.hxr.team"  "https://hydra.iohk.io"];
+#  nix.binaryCachePublicKeys = [ "ryantrinkle.com-1:JJiAKaRv9mWgpVAz8dwewnZe0AzzEAzPkagE9SP5NWI=" "cache.hxr.team-1:hMN5cbH9fBQ/GhiZ4KlT2zXB18+/5AeMae1frHrDtrg=" "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="];
+
+  nix.distributedBuilds = true; # workaround for https://github.com/NixOS/nixpkgs/issues/46038
+  nix.trustedUsers = [ "root" "arthur" ];
+  nix.requireSignedBinaryCaches = true;
+  nix.useSandbox = "relaxed";
+
   networking.firewall.allowedTCPPorts = [ 22 6881 ];
   networking.firewall.allowedUDPPorts = [ 8881 ];
 
@@ -127,3 +151,4 @@ fileSystems."/".options = [ "noatime" "nodiratime" "discard" ];
   system.stateVersion = "19.03"; # Did you read the comment?
 
 }
+
