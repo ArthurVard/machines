@@ -97,9 +97,6 @@ fileSystems."/".options = [ "noatime" "nodiratime" "discard" ];
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
-  # Enable sound.
-  sound.enable = true;
-  hardware.pulseaudio.enable = true;
 
   services.upower.enable = true;     
 
@@ -143,6 +140,33 @@ fileSystems."/".options = [ "noatime" "nodiratime" "discard" ];
   networking.firewall.allowedTCPPorts = [ 22 6881 ];
   networking.firewall.allowedUDPPorts = [ 8881 ];
 
+  # Enable sound.
+  sound.enable = true;
+
+  # hardwre
+  hardware = {
+    cpu.intel.updateMicrocode = true;
+    cpu.amd.updateMicrocode = false;
+    enableAllFirmware = true;
+
+    bluetooth.enable = true;
+
+    pulseaudio = {
+     	enable = true;	
+	# For Seam	
+	support32Bit = true;
+	# For bt headphones
+	package = pkgs.pulseaudioFull;
+    };
+
+    opengl = {
+       enable = true;
+       driSupport = true;
+       # For Steam
+       driSupport32Bit = true;
+    };
+ };
+    
 
   # This value determines the NixOS release with which your system is to be
   # compatible, in order to avoid breaking some software such as database
