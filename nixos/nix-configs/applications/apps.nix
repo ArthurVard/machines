@@ -14,7 +14,6 @@
     gitAndTools.gitFull
     git-crypt
     iptables nmap tcpdump
-    rxvt_unicode
     zlib
     bc
     bash
@@ -89,9 +88,7 @@
     # screenshot
     maim
     
-    # screencasts
-    vokoscreen
-    keymon
+ 
   ];
 
 
