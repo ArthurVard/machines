@@ -3,12 +3,13 @@
     imports =
     [
         ./apps.nix
- #       ./virtualisation.nix
+ #      ./virtualisation.nix
         ./tmux.nix
         ./terminals.nix
 	./devops.nix
         ./encryption.nix
         ./vstreaming.nix
+        ./i3.nix
 
     ];
 }
