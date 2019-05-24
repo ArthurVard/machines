@@ -22,7 +22,13 @@
    services.private-ssh-pipe.user = "arthur";
    
 
-   services.syncthing.enable = true;
+   services.syncthing = {
+	 enable = true;
+	 all_proxy = null;
+	 dataDir = "/home/arthur";
+	 user = "arthur";
+	 openDefaultPorts = true;
+     };
 
 
    nixpkgs.config = {
