@@ -4,6 +4,7 @@
     [
         ./apps.nix
  #      ./virtualisation.nix
+ 	./docker.nix
         ./tmux.nix
         ./terminals.nix
 	./devops.nix

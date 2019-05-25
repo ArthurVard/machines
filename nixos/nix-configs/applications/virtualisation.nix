@@ -11,6 +11,7 @@ virtualisation = {
         headless            = false;
       };
     };
+
     docker = {
       enable           = true;
       enableOnBoot     = true;
