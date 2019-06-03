@@ -1,15 +1,12 @@
 { config, pkgs, ... } :
- {
-   services.syncthing.enable = true;
-#   services.syncthing.dataDir = "/home/syncthing";
+{
 
-   users.extraUsers = {
-
-     syncthing = {
-#       group = "users";
-       home = "/home/arthur/syncthing";
-       useDefaultShell = true;
+   services.syncthing = {
+	 enable = true;
+	 all_proxy = null;
+	 dataDir = "/home/arthur";
+	 user = "arthur";
+	 openDefaultPorts = true;
      };
 
-   };
  }

@@ -13,7 +13,7 @@
       ./nix-configs/fonts.nix
       ./nix-configs/private-ssh-pipe.nix
       ./nix-configs/applications
-      # ./nix-configs/syncthing.nix
+      ./nix-configs/syncthing.nix
 
     ];
 
@@ -22,13 +22,6 @@
    services.private-ssh-pipe.user = "arthur";
    
 
-   services.syncthing = {
-	 enable = true;
-	 all_proxy = null;
-	 dataDir = "/home/arthur";
-	 user = "arthur";
-	 openDefaultPorts = true;
-     };
 
 
    nixpkgs.config = {
@@ -51,14 +44,15 @@
    boot.initrd.luks.devices = [
   {
     name = "root";
-    device = "/dev/sda3";
+    device = "/dev/nvme0n1p3";
     preLVM = true;
+    allowDiscards = true;
   }
 ];
 
 boot.kernelPackages = pkgs.linuxPackages_latest;
 
-boot.loader.grub.device = "/dev/sda";
+boot.loader.grub.device = "/dev/nvme0n1p3";
 fileSystems."/".options = [ "noatime" "nodiratime" "discard" ];
    
     

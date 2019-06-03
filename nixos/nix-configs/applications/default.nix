@@ -11,6 +11,9 @@
         ./encryption.nix
         ./vstreaming.nix
         ./i3.nix
+#	./network.nix
+	./network-scanners.nix
+	
 
     ];
 }
