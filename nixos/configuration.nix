@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   imports =
@@ -38,8 +38,12 @@
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.grub.efiSupport = true;
 
+  
   # networking.hostName = "nixos"; # Define your hostname.
   networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  networking.wireless.userControlled.enable = true;
+  networking.dhcpcd.enable = true;
+  systemd.services.dhcpcd.serviceConfig.Type = lib.mkForce "simple";   
 
    boot.initrd.luks.devices = [
   {
