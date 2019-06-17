@@ -18,6 +18,7 @@
     ];
 
 
+
    services.private-ssh-pipe.enable = true;
    services.private-ssh-pipe.user = "arthur";
    

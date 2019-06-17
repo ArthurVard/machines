@@ -62,6 +62,15 @@
     opam
 
 
+    # http clients
+    http-prompt
+    httplab
+    curl
+    wget
+    httpie
+    wuzz
+    insomnia
+
     # X11 packages
     chromium
     firefoxWrapper
@@ -85,10 +94,26 @@
     rhythmbox
     pwgen
     
+    
     # screenshot
     maim
-    
- 
+
+    # misc
+    haskellPackages.arbtt
+
+
+    # text
+     calibre
+     djview
+     djvulibre
+     enca
+     ghostscript
+     pandoc
+
+    # chat clients
+    teamviewer
+    w3m-full
+
   ];
 
 

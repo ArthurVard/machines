@@ -5,5 +5,7 @@
     ansible
     ansible-lint
     terraform
+    drone
+    drone-cli
   ];
 }

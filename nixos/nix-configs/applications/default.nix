@@ -13,7 +13,8 @@
         ./i3.nix
 #	./network.nix
 	./network-scanners.nix
-	
+
+        ./db.nix
 
     ];
 }
