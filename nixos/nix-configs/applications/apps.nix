@@ -93,6 +93,8 @@
     steam
     rhythmbox
     pwgen
+    compton
+    conky
     
     
     # screenshot
@@ -113,7 +115,7 @@
     # chat clients
     teamviewer
     w3m-full
-
+    keybase
   ];
 
 

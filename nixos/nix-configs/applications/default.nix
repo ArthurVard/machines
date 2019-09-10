@@ -3,7 +3,7 @@
     imports =
     [
         ./apps.nix
- #      ./virtualisation.nix
+        ./virtualisation.nix
  	./docker.nix
         ./tmux.nix
         ./terminals.nix

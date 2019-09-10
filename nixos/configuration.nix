@@ -148,11 +148,13 @@ fileSystems."/".options = [ "noatime" "nodiratime" "discard" ];
   # Enable sound.
   sound.enable = true;
 
+
   # hardwre
   hardware = {
     cpu.intel.updateMicrocode = true;
     cpu.amd.updateMicrocode = false;
     enableAllFirmware = true;
+    enableRedistributableFirmware = true; # For some unfree drivers
 
     bluetooth.enable = true;
 

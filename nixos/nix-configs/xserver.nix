@@ -1,6 +1,17 @@
 { pkgs, ... }:
 
 {
+
+   services.compton = {
+ 		   enable = true;
+		   backend = "glx"; 
+ 		   #noDNDShadow = false;
+ 		   shadow = true;
+ 		   shadowExclude = [ "!(I3_FLOATING_WINDOW@:c = 1)" ];
+ 		   vSync = "opengl-swc";
+ 		   };
+
+ 
   services.xserver = {
     enable = true;
     
