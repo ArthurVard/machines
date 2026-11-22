@@ -1,0 +1,2 @@
+# LF on every checkout, so files copied or cloned to the Linux control machine are the same bytes as in the repo.
+* text=auto eol=lf

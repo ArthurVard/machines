@@ -1,0 +1,25 @@
+# Role "base": small tools and the login banner, on every server.
+
+- name: Install the small tools
+  ansible.builtin.apt:
+    name: "{{ base_packages + base_extra_packages }}"
+    state: present
+    cache_valid_time: 3600            # refresh the package list if it's older than an hour
+  become: true
+
+# Ubuntu runs the scripts in /etc/update-motd.d at each SSH login; 99 comes last, right above the prompt.
+- name: Write the login banner
+  ansible.builtin.template:
+    src: 99-figlet.j2
+    dest: /etc/update-motd.d/99-figlet
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+# Older cloud-configs wrote a static banner here; the banner above replaces it (motd_greeting holds its text).
+- name: Remove the static banner
+  ansible.builtin.file:
+    path: /etc/motd
+    state: absent
+  become: true

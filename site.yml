@@ -1,0 +1,156 @@
+# Safe to re-run: brings the servers to the wanted state, then checks it.
+# 1. The base system: the Hetzner Cloud Firewall, a reboot if the package upgrade needs one, and checks.
+# 2. The roles, each tagged with its name: "base" on every server; the development servers' toolbox comes one role at a time.
+#
+#   ansible-playbook site.yml --limit dev               # everything
+#   ansible-playbook site.yml --limit dev --tags base   # one role (plus the checks and waits tagged "always")
+
+- name: Base system
+  hosts: servers
+  gather_facts: false
+
+  tasks:
+    # Before anything else: the server with the IPv4 in your inventory.yml exists in this project and has the console name
+    # written there, so a typo can't send this run to another server.
+    - name: Check the server
+      ansible.builtin.import_tasks: tasks/check_server.yml
+      tags: [always]
+
+    # --- The firewall, through the Hetzner API (runs on this control machine) ---
+
+    - name: Create or update the Hetzner Cloud Firewall
+      hetzner.hcloud.firewall:
+        name: "{{ firewall_name }}"
+        rules: "{{ firewall_rules }}"
+        state: present
+      delegate_to: localhost
+      run_once: true
+
+    - name: Attach the firewall to {{ hcloud_server_name }}
+      hetzner.hcloud.firewall_resource:
+        firewall: "{{ firewall_name }}"
+        servers: ["{{ hcloud_server_name }}"]
+        state: present
+      delegate_to: localhost
+      ignore_errors: "{{ ansible_check_mode }}"   # in --check the firewall may not exist yet
+
+    # --- Wait for the server and for cloud-init ---
+    # Tagged "always", so a run with --tags <role> right after a rebuild waits too (apt would clash with cloud-init's).
+
+    - name: Wait until the server answers on SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+      tags: [always]
+
+    - name: Wait for cloud-init to finish
+      ansible.builtin.command: cloud-init status --wait --long
+      register: cloud_init
+      changed_when: false
+      failed_when: cloud_init.rc not in [0, 2]
+      check_mode: false
+      tags: [always]
+
+    - name: Show cloud-init's warnings (it finished, with recoverable errors)
+      ansible.builtin.debug:
+        var: cloud_init.stdout_lines
+      when: cloud_init.rc == 2
+      tags: [always]
+
+    - name: Gather facts
+      ansible.builtin.setup:
+
+    - name: Does the package upgrade need a reboot?
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Reboot
+      ansible.builtin.reboot:
+      become: true
+      when: reboot_required.stat.exists
+
+    # --- Checks (they change nothing) ---
+
+    - name: Read the effective SSH settings
+      ansible.builtin.command: sshd -T
+      become: true
+      register: sshd
+      changed_when: false
+      check_mode: false
+
+    - name: Check the SSH settings
+      ansible.builtin.assert:
+        that:
+          - "'permitrootlogin no' in sshd.stdout_lines"
+          - "'passwordauthentication no' in sshd.stdout_lines"
+          - "'kbdinteractiveauthentication no' in sshd.stdout_lines"
+          - "'allowtcpforwarding local' in sshd.stdout_lines"
+          - "('allowusers ' ~ admin_user) in sshd.stdout_lines"
+        fail_msg: "sshd's effective settings differ from 00-hardening.conf; see the 'sshd -T' output above."
+
+    - name: Read ufw's state
+      ansible.builtin.command: ufw status
+      become: true
+      register: ufw
+      changed_when: false
+      check_mode: false
+
+    # Any other allowed port fails this check, whatever opened it.
+    - name: Check ufw (on; SSH, 80 and 443 allowed, nothing else)
+      vars:
+        ufw_allowed: >-
+          {{ ufw.stdout_lines | select('search', ' ALLOW ') | map('regex_replace', ' +ALLOW .*$', '') | map('trim') | sort }}
+      ansible.builtin.assert:
+        that:
+          - "'Status: active' in ufw.stdout"
+          - ufw_allowed == ['443/tcp', '443/tcp (v6)', '80/tcp', '80/tcp (v6)', 'OpenSSH', 'OpenSSH (v6)']
+        fail_msg: "ufw allows {{ ufw_allowed }}; expected only OpenSSH, 80/tcp and 443/tcp (IPv4 and IPv6)."
+
+    - name: Check that fail2ban and Docker run
+      ansible.builtin.command: "systemctl is-active {{ item }}"
+      loop: [fail2ban, docker]
+      changed_when: false
+      check_mode: false
+
+    - name: Check Docker Compose
+      ansible.builtin.command: docker compose version
+      become: true
+      changed_when: false
+      check_mode: false
+
+    - name: Read {{ admin_user }}'s groups
+      ansible.builtin.command: "id -nG {{ admin_user }}"
+      register: user_groups
+      changed_when: false
+      check_mode: false
+
+    - name: Check that {{ admin_user }} can use Docker
+      ansible.builtin.assert:
+        that: "'docker' in user_groups.stdout.split()"
+
+    - name: Check the swap file (development servers only)
+      ansible.builtin.assert:
+        that: (ansible_swaptotal_mb | int > 0) == (swap_size | length > 0)
+        fail_msg: "Expected {{ 'a swap file' if swap_size else 'no swap' }}, found {{ ansible_swaptotal_mb }} MB of swap."
+
+    # One refused login per run: fail2ban bans an address after 5 in 10 minutes. Skipped in --check and with --tags.
+    - name: Check that root can't log in over SSH
+      ansible.builtin.command: >-
+        ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new root@{{ ansible_host }} true
+      delegate_to: localhost
+      register: root_login
+      changed_when: false
+      failed_when: root_login.rc == 0
+
+    - name: Done
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} ({{ hcloud_server_name }}): the base system is as expected."
+
+# --- The roles: one per step, each tagged with its name ---
+
+- name: Tools on every server
+  hosts: servers
+  gather_facts: false
+  roles:
+    - role: base
+      tags: [base]

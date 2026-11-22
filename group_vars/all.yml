@@ -1,0 +1,35 @@
+# Settings for every server. This file is public: no secrets, no server names, no addresses (those are in your inventory.yml).
+# How Ansible connects is in group_vars/servers.yml; the development servers' extras are in group_vars/toolbox.yml.
+
+# The Ubuntu release a rebuild installs ("hcloud image list --type system" shows the names).
+# Keep all servers on the same release: binaries built on a development server must run on the others.
+server_image: ubuntu-26.04
+
+# The login user that cloud-init creates (password-less sudo, SSH keys only).
+admin_user: arthur
+
+# This control machine's key for the servers: Ansible logs in with it.
+admin_ssh_key_file: ~/.ssh/id_ed25519_servers
+
+# The public keys allowed to log in as admin_user: paths to .pub files on this control machine, one per device.
+# Never paste a key line here: with a public key and the user name, anyone can test which servers accept that key.
+# To add a device: copy its .pub file to this machine and add the path. Keys are set by a rebuild, so add them before one.
+admin_ssh_pub_key_files:
+  - "{{ admin_ssh_key_file }}.pub"
+  # - ~/.ssh/pc_servers.pub
+
+# No swap file unless a group sets one (group_vars/toolbox.yml does).
+swap_size: ""
+
+# The login banner (role "base") shows the server's console name; this line goes under it. "" for none.
+motd_greeting: "Hello Jermuk"
+
+# The Hetzner Cloud Firewall in front of every server. It sits outside the server, so Docker can't bypass it.
+# Databases are never opened here: reach them through an SSH tunnel.
+# The name is this kit's own, so the run can't take over a firewall made for other servers in the project.
+firewall_name: hetzner-servers
+firewall_rules:
+  - { description: ssh,   direction: in, protocol: tcp,  port: "22",  source_ips: ["0.0.0.0/0", "::/0"] }
+  - { description: http,  direction: in, protocol: tcp,  port: "80",  source_ips: ["0.0.0.0/0", "::/0"] }
+  - { description: https, direction: in, protocol: tcp,  port: "443", source_ips: ["0.0.0.0/0", "::/0"] }
+  - { description: ping,  direction: in, protocol: icmp,              source_ips: ["0.0.0.0/0", "::/0"] }

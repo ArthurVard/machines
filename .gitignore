@@ -1,0 +1,8 @@
+# Yours only: your servers' IPv4 addresses and console names (copy inventory.example.yml to inventory.yml).
+inventory.yml
+# Run logs: they can hold addresses.
+*.log
+*.retry
+.env
+.env.*
+.vault_pass*

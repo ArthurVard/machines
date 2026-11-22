@@ -1,0 +1,60 @@
+# Rebuild ONE server from the cloud-config. This WIPES its disk.
+# Run it by hand only:   ansible-playbook rebuild.yml --limit <handle>     (the server's handle in your inventory.yml, e.g. dev)
+#
+# Everything runs on this control machine (delegate_to: localhost), through the Hetzner API.
+# Nothing is wiped until the server with the IPv4 in your inventory.yml has the console name written there, and you've typed it.
+
+- name: Rebuild a server from the cloud-config (wipes its disk)
+  hosts: servers
+  gather_facts: false
+  vars_prompt:
+    - name: typed_name
+      prompt: "This WIPES the server's disk. Type its name in the Hetzner Console to go on"
+      private: false
+
+  tasks:
+    - name: Refuse to run without --limit to one server
+      ansible.builtin.assert:
+        that:
+          - ansible_limit is defined
+          - ansible_play_hosts_all | length == 1
+        fail_msg: "Run it for one server: --limit <its handle in inventory.yml>. Nothing was changed."
+        quiet: true
+      run_once: true
+
+    # The server with your IPv4 exists in this project and has the console name you wrote.
+    - name: Check the server
+      ansible.builtin.import_tasks: tasks/check_server.yml
+
+    - name: Check the name you typed
+      ansible.builtin.assert:
+        that: typed_name == hcloud_server_name
+        fail_msg: "You typed '{{ typed_name }}', but {{ inventory_hostname }} is '{{ hcloud_server_name }}'. Nothing was changed."
+        quiet: true
+
+    # By its ID: exactly the server the checks found by its IPv4.
+    - name: Rebuild {{ hcloud_server_name }} with {{ server_image }}
+      hetzner.hcloud.server:
+        id: "{{ found_server[0].id }}"
+        image: "{{ server_image }}"
+        user_data: "{{ lookup('ansible.builtin.template', 'cloud-init.yaml.j2') }}"
+        state: rebuild
+      delegate_to: localhost
+
+    - name: Forget the old host key of {{ inventory_hostname }}
+      ansible.builtin.known_hosts:
+        name: "{{ ansible_host }}"
+        state: absent
+      delegate_to: localhost
+
+    - name: Wait for SSH on the rebuilt server
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        delay: 20
+        timeout: 600
+      delegate_to: localhost
+
+    - name: Next step
+      ansible.builtin.debug:
+        msg: "Rebuilt. Now run: ansible-playbook site.yml --limit {{ inventory_hostname }}"

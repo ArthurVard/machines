@@ -1,0 +1,20 @@
+# Your servers. Copy this file to inventory.yml (git ignores it, so it stays on your machine) and fill it in.
+#
+# Each server: a short handle for the commands (--limit dev), its IPv4 and its name in the Hetzner Console.
+# Before anything runs, both playbooks ask the Hetzner API for the server with that IPv4 and stop unless it has that name,
+# so a typo in either one can't reach another server.
+#
+# 203.0.113.x are documentation addresses (RFC 5737): put your servers' addresses from the Console in their place.
+servers:
+  hosts:
+    dev:
+      ansible_host: 203.0.113.10          # its IPv4, from the server's page in the Hetzner Console
+      hcloud_server_name: example-dev     # its name in the Hetzner Console
+    prod:
+      ansible_host: 203.0.113.20
+      hcloud_server_name: example-prod
+  children:
+    # The development servers: a swap file, Emacs and the toolbox roles (group_vars/toolbox.yml).
+    toolbox:
+      hosts:
+        dev:

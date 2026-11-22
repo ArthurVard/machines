@@ -1,0 +1,8 @@
+# The development servers: the group "toolbox" in your inventory.yml.
+
+# A swap file: a cheap safety net for the memory peaks of big builds (GHC, for one).
+swap_size: 4G
+
+# Extra packages for the role "base": Emacs without the GUI (Emacs 30.2 in Ubuntu 26.04).
+base_extra_packages:
+  - emacs-nox

@@ -1,0 +1,38 @@
+# Checks before touching a server, imported by rebuild.yml and site.yml. They change nothing.
+# Your inventory.yml sets each server's IPv4 (ansible_host) and console name (hcloud_server_name) by hand. The run stops unless
+# this Hetzner project holds a server with that IPv4 and that name, so a typo in either one can't reach another server.
+
+- name: Check that {{ inventory_hostname }}'s IPv4 and console name are set
+  ansible.builtin.assert:
+    that:
+      - ansible_host | default('') is match('^[0-9]{1,3}([.][0-9]{1,3}){3}$')
+      - hcloud_server_name | default('') | length > 0
+    fail_msg: >-
+      Set ansible_host (its IPv4) and hcloud_server_name (its name in the Hetzner Console) for {{ inventory_hostname }}
+      in inventory.yml first. Nothing was changed.
+    quiet: true
+
+- name: List the servers in this Hetzner project
+  hetzner.hcloud.server_info:
+  delegate_to: localhost
+  register: server_info
+
+- name: Find {{ inventory_hostname }}'s server by its IPv4
+  ansible.builtin.set_fact:
+    found_server: "{{ server_info.hcloud_server_info | selectattr('ipv4_address', 'equalto', ansible_host) | list }}"
+
+- name: Check that a server in this project has that IPv4
+  ansible.builtin.assert:
+    that: found_server | length == 1
+    fail_msg: >-
+      No server in this Hetzner project has {{ inventory_hostname }}'s IPv4, {{ ansible_host }}. Check the address, and that
+      HCLOUD_TOKEN belongs to the server's project. Nothing was changed.
+    quiet: true
+
+- name: Check that it has the console name you wrote
+  ansible.builtin.assert:
+    that: found_server[0].name == hcloud_server_name
+    fail_msg: >-
+      The server with {{ ansible_host }} is named '{{ found_server[0].name }}' in the Hetzner Console, not
+      '{{ hcloud_server_name }}'. Nothing was changed.
+    quiet: true
