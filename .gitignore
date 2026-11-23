@@ -1,4 +1,5 @@
-# Yours only: your servers' IPv4 addresses and console names (copy inventory.example.yml to inventory.yml).
+# Yours only: each kit's local inventory, with your servers' IPv4 addresses and console names
+# (hetzner/: copy inventory.example.yml to inventory.yml). The pattern matches in every folder.
 inventory.yml
 # Run logs: they can hold addresses.
 *.log

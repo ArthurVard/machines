@@ -26,8 +26,8 @@ motd_greeting: "Hello Jermuk"
 
 # The Hetzner Cloud Firewall in front of every server. It sits outside the server, so Docker can't bypass it.
 # Databases are never opened here: reach them through an SSH tunnel.
-# The name is this kit's own, so the run can't take over a firewall made for other servers in the project.
-firewall_name: hetzner-servers
+# The name is this repo's own, so the run can't take over a firewall made for other servers in the project.
+firewall_name: machines
 firewall_rules:
   - { description: ssh,   direction: in, protocol: tcp,  port: "22",  source_ips: ["0.0.0.0/0", "::/0"] }
   - { description: http,  direction: in, protocol: tcp,  port: "80",  source_ips: ["0.0.0.0/0", "::/0"] }
