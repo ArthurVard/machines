@@ -1,13 +1,14 @@
 # machines
 
 Setup kits for my machines: how each one is created or rebuilt and brought to a known state, with the docs next to the code. Cloud
-servers today, NixOS machines later.
+servers with Ansible, and NixOS machines.
 
 | Folder | What |
 |---|---|
 | [`hetzner/`](hetzner/README.md) | Hetzner Cloud servers: a rebuild with cloud-init, then Ansible (the Cloud Firewall, a hardened base, small tools, and a development toolbox added one role at a time) |
+| [`nixos/`](nixos/README.md) | NixOS machines. For now, my 2019 laptop config (NixOS 19.03), imported with its history; it needs updating before it runs again |
 
-**Later:** `nixos/` (NixOS machines) and `docs/` (server and hosting tutorials), each when its first file is written.
+**Later:** `docs/` (server and hosting tutorials), when its first file is written.
 
 ## The rules
 
