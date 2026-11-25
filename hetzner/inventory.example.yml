@@ -1,3 +1,4 @@
+---
 # Your servers. Copy this file to inventory.yml (git ignores it, so it stays on your machine) and fill it in.
 #
 # Each server: a short handle for the commands (--limit dev), its IPv4 and its name in the Hetzner Console.

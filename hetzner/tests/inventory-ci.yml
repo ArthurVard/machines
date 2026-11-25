@@ -1,0 +1,15 @@
+---
+# The inventory for the tests in CI (.github/workflows/hetzner.yml): the CI machine itself, under two names.
+# "ci" stands for a development server (group toolbox); "ci-prod" for a server without the toolbox.
+# Not named inventory.yml: .gitignore keeps every file of that name out of git.
+servers:
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: /usr/bin/python3
+  hosts:
+    ci:
+    ci-prod:
+  children:
+    toolbox:
+      hosts:
+        ci:

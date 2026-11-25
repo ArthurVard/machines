@@ -1,3 +1,4 @@
+---
 # How Ansible reaches a server: the IPv4 in your inventory.yml (ansible_host), as admin_user, offering only admin_ssh_key_file.
 # (These live here, not in all.yml: the implicit localhost that runs the Hetzner API tasks also reads all.yml.)
 ansible_user: "{{ admin_user }}"

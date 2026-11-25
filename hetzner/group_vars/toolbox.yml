@@ -1,3 +1,4 @@
+---
 # The development servers: the group "toolbox" in your inventory.yml.
 
 # A swap file: a cheap safety net for the memory peaks of big builds (GHC, for one).

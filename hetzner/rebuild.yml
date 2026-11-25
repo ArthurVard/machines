@@ -1,3 +1,4 @@
+---
 # Rebuild ONE server from the cloud-config. This WIPES its disk.
 # Run it by hand only:   ansible-playbook rebuild.yml --limit <handle>     (the server's handle in your inventory.yml, e.g. dev)
 #
@@ -33,7 +34,7 @@
         quiet: true
 
     # By its ID: exactly the server the checks found by its IPv4.
-    - name: Rebuild {{ hcloud_server_name }} with {{ server_image }}
+    - name: Rebuild the server {{ hcloud_server_name }}
       hetzner.hcloud.server:
         id: "{{ found_server[0].id }}"
         image: "{{ server_image }}"

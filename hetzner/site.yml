@@ -1,3 +1,4 @@
+---
 # Safe to re-run: brings the servers to the wanted state, then checks it.
 # 1. The base system: the Hetzner Cloud Firewall, a reboot if the package upgrade needs one, and checks.
 # 2. The roles, each tagged with its name: "base" on every server; the development servers' toolbox comes one role at a time.
@@ -106,11 +107,15 @@
           - ufw_allowed == ['443/tcp', '443/tcp (v6)', '80/tcp', '80/tcp (v6)', 'OpenSSH', 'OpenSSH (v6)']
         fail_msg: "ufw allows {{ ufw_allowed }}; expected only OpenSSH, 80/tcp and 443/tcp (IPv4 and IPv6)."
 
+    - name: Read the state of the services
+      ansible.builtin.service_facts:
+
     - name: Check that fail2ban and Docker run
-      ansible.builtin.command: "systemctl is-active {{ item }}"
-      loop: [fail2ban, docker]
-      changed_when: false
-      check_mode: false
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services.get('fail2ban.service', {}).get('state') == 'running'
+          - ansible_facts.services.get('docker.service', {}).get('state') == 'running'
+        fail_msg: "fail2ban or Docker isn't running."
 
     - name: Check Docker Compose
       ansible.builtin.command: docker compose version
@@ -118,13 +123,13 @@
       changed_when: false
       check_mode: false
 
-    - name: Read {{ admin_user }}'s groups
+    - name: Read the groups of {{ admin_user }}
       ansible.builtin.command: "id -nG {{ admin_user }}"
       register: user_groups
       changed_when: false
       check_mode: false
 
-    - name: Check that {{ admin_user }} can use Docker
+    - name: Check Docker access for {{ admin_user }}
       ansible.builtin.assert:
         that: "'docker' in user_groups.stdout.split()"
 

@@ -1,3 +1,4 @@
+---
 collections:
   - name: hetzner.hcloud
     version: ">=6.6.0"   # 6.6.0: user_data on a Rebuild. 7.x needs Python 3.11+ on the control machine.

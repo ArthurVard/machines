@@ -1,3 +1,4 @@
+---
 # Settings for every server. This file is public: no secrets, no server names, no addresses (those are in your inventory.yml).
 # How Ansible connects is in group_vars/servers.yml; the development servers' extras are in group_vars/toolbox.yml.
 
@@ -22,14 +23,14 @@ admin_ssh_pub_key_files:
 swap_size: ""
 
 # The login banner (role "base") shows the server's console name; this line goes under it. "" for none.
-motd_greeting: "Hello Jermuk"
+base_motd_greeting: "Hello Jermuk"
 
 # The Hetzner Cloud Firewall in front of every server. It sits outside the server, so Docker can't bypass it.
 # Databases are never opened here: reach them through an SSH tunnel.
 # The name is this repo's own, so the run can't take over a firewall made for other servers in the project.
 firewall_name: machines
 firewall_rules:
-  - { description: ssh,   direction: in, protocol: tcp,  port: "22",  source_ips: ["0.0.0.0/0", "::/0"] }
-  - { description: http,  direction: in, protocol: tcp,  port: "80",  source_ips: ["0.0.0.0/0", "::/0"] }
-  - { description: https, direction: in, protocol: tcp,  port: "443", source_ips: ["0.0.0.0/0", "::/0"] }
-  - { description: ping,  direction: in, protocol: icmp,              source_ips: ["0.0.0.0/0", "::/0"] }
+  - {description: ssh, direction: in, protocol: tcp, port: "22", source_ips: ["0.0.0.0/0", "::/0"]}
+  - {description: http, direction: in, protocol: tcp, port: "80", source_ips: ["0.0.0.0/0", "::/0"]}
+  - {description: https, direction: in, protocol: tcp, port: "443", source_ips: ["0.0.0.0/0", "::/0"]}
+  - {description: ping, direction: in, protocol: icmp, source_ips: ["0.0.0.0/0", "::/0"]}

@@ -1,0 +1,111 @@
+---
+# Tests for the Hetzner kit (hetzner/), on every push or pull request that changes it. They need no server and no token.
+# - lint: the syntax check and ansible-lint.
+# - container: a fresh Ubuntu 26.04 gets the control machine's setup from hetzner/README.md, then the role "base" twice (the
+#   second run must change nothing). The cloud-config is rendered for a dev and a prod server and checked against cloud-init's
+#   schema.
+name: hetzner kit
+
+"on":
+  push:
+    paths:
+      - "hetzner/**"
+      - ".github/workflows/hetzner.yml"
+  pull_request:
+    paths:
+      - "hetzner/**"
+      - ".github/workflows/hetzner.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Syntax check and ansible-lint
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+        working-directory: hetzner
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Ansible, the collection and ansible-lint
+        run: |
+          pipx install --include-deps ansible
+          pipx inject ansible requests python-dateutil
+          ansible-galaxy collection install -r requirements.yml
+          pipx install ansible-lint
+
+      - name: Syntax check
+        run: ansible-playbook -i tests/inventory-ci.yml rebuild.yml site.yml --syntax-check
+
+      - name: ansible-lint
+        run: ansible-lint
+
+  container:
+    name: Role base and the cloud-config on a fresh Ubuntu 26.04
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
+    container: ubuntu:26.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: hetzner
+    steps:
+      - name: Install what a control machine needs (the README), plus sudo and cloud-init
+        working-directory: /
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git openssh-client pipx python3 sudo cloud-init python3-jsonschema
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Ansible and the collection, as the README says
+        run: |
+          pipx install --include-deps ansible
+          pipx inject ansible requests python-dateutil
+          ansible-galaxy collection install -r requirements.yml
+
+      - name: A throwaway key in place of the servers key, for the cloud-config's key lookup
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -q -t ed25519 -N "" -C ci -f ~/.ssh/id_ed25519_servers
+
+      - name: Role base, first run
+        run: ansible-playbook -i tests/inventory-ci.yml site.yml --limit ci --tags base --skip-tags always
+
+      - name: Role base, second run (it must change nothing)
+        run: |
+          ansible-playbook -i tests/inventory-ci.yml site.yml --limit ci --tags base --skip-tags always | tee second-run.log
+          grep -Eq '^ci +: ok=[0-9]+ +changed=0 ' second-run.log
+
+      - name: Check what the role set up
+        run: |
+          dpkg -s htop tmux unzip figlet emacs-nox > /dev/null
+          test -x /etc/update-motd.d/99-figlet
+          /etc/update-motd.d/99-figlet | tee banner.txt
+          test -s banner.txt
+          test ! -e /etc/motd
+
+      - name: Render the cloud-config for a dev and a prod server
+        run: >-
+          ansible servers -i tests/inventory-ci.yml --playbook-dir .
+          -m ansible.builtin.template -a "src=cloud-init.yaml.j2 dest=/tmp/cloud-init-{{ inventory_hostname }}.yaml"
+
+      - name: Check both against cloud-init's schema, the key, and the swap file only on dev
+        run: |
+          cloud-init schema --config-file /tmp/cloud-init-ci.yaml
+          cloud-init schema --config-file /tmp/cloud-init-ci-prod.yaml
+          grep -q 'ssh-ed25519 ' /tmp/cloud-init-ci.yaml
+          grep -q '^swap:' /tmp/cloud-init-ci.yaml
+          if grep -q '^swap:' /tmp/cloud-init-ci-prod.yaml; then echo "prod got a swap file"; exit 1; fi

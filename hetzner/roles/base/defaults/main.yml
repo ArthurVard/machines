@@ -1,3 +1,4 @@
+---
 # Role "base": small tools and the login banner, on every server.
 
 # git and curl are in Ubuntu's image already; figlet draws the banner.
@@ -12,7 +13,7 @@ base_extra_packages: []
 
 # The login banner (/etc/update-motd.d/99-figlet), drawn with figlet at each SSH login.
 # By default the server's name in the Hetzner Console (inventory.yml), so a rename changes the banner too.
-motd_banner: "{{ hcloud_server_name | default(inventory_hostname) }}"
+base_motd_banner: "{{ hcloud_server_name | default(inventory_hostname) }}"
 
 # A plain line under the banner; "" for none. group_vars/all.yml sets yours.
-motd_greeting: ""
+base_motd_greeting: ""

@@ -1,6 +1,6 @@
 #!/bin/sh
-# The login banner. Managed by Ansible (role "base"): set motd_banner and motd_greeting instead of editing this file.
-figlet {{ motd_banner | quote }}
-{% if motd_greeting %}
-echo {{ motd_greeting | quote }}
+# The login banner. Managed by Ansible (role "base"): set base_motd_banner and base_motd_greeting instead of editing this file.
+figlet {{ base_motd_banner | quote }}
+{% if base_motd_greeting %}
+echo {{ base_motd_greeting | quote }}
 {% endif %}

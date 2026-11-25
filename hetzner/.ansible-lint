@@ -1,0 +1,7 @@
+---
+# ansible-lint's settings for this kit. CI runs it from this folder (.github/workflows/hetzner.yml).
+profile: production
+
+skip_list:
+  # The plays never use "strategy: free", the one case where run_once would behave differently.
+  - run-once[task]
