@@ -86,6 +86,14 @@
       when: mise_rails.rc != 0
       changed_when: true
 
+    # mise's RubyGems plugin makes shims after a gem install by running "mise reshim", but it skips that silently when mise isn't
+    # on the PATH, as under Ansible (sudo's PATH has no ~/.local/bin). So the role makes the shim itself, while it's missing.
+    - name: Make the shim for rails
+      ansible.builtin.command:
+        argv: ["{{ mise_bin }}", reshim]
+        chdir: "{{ mise_home }}"
+        creates: "{{ mise_home }}/.local/share/mise/shims/rails"
+
     # mise's recommended pair: shims for login shells and VS Code's remote server, full activation in interactive shells.
     - name: Put mise's shims on the PATH (~/.profile)
       ansible.builtin.blockinfile:

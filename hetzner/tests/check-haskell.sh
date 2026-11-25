@@ -19,7 +19,10 @@ same() {   # same <what> <found> <expected>
 }
 
 step "The tools on the PATH, and their versions"
-command -v ghcup ghc cabal stack haskell-language-server-wrapper
+# One at a time: "command -v a b c" doesn't fail when only some are missing.
+for tool in ghcup ghc cabal stack haskell-language-server-wrapper; do
+  command -v "$tool" || { echo "$tool: not on the PATH"; exit 1; }
+done
 ghcup --version
 same GHC "$(ghc --numeric-version)" "$want_ghc"
 same Cabal "$(cabal --numeric-version)" "$want_cabal"

@@ -19,7 +19,10 @@ same() {   # same <what> <found> <expected>
 }
 
 step "The tools on the PATH, and their versions"
-command -v mise ruby gem rails python node npm go
+# One at a time: "command -v a b c" doesn't fail when only some are missing.
+for tool in mise ruby gem rails python node npm go; do
+  command -v "$tool" || { echo "$tool: not on the PATH"; exit 1; }
+done
 same mise "$(mise --version | grep -oE '[0-9]{4}\.[0-9]+\.[0-9]+' | head -n 1)" "$want_mise"
 same Ruby "$(ruby -e 'print RUBY_VERSION')" "$want_ruby"
 same Rails "$(rails --version)" "Rails $want_rails"
