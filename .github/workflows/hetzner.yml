@@ -151,3 +151,24 @@ jobs:
           install -o "$ADMIN_USER" -g "$ADMIN_USER" -m 0644 tests/Hello.hs /tmp/haskell-check/
           su - "$ADMIN_USER" -c "bash -s -- /tmp/haskell-check $(want ghc) $(want cabal) $(want stack) $(want hls)" \
             < tests/check-haskell.sh
+
+      # mise fetches Ruby's and Python's builds through GitHub's API, which limits anonymous calls per hour and per address, and
+      # these runners share addresses. The job's own token (read-only, gone when the job ends) lifts the limit.
+      - name: Role mise, first run
+        env:
+          MISE_GITHUB_TOKEN: ${{ github.token }}
+        run: ansible-playbook -i tests/inventory-ci.yml site.yml --limit ci --tags mise --skip-tags always
+
+      - name: Role mise, second run (it must change nothing)
+        env:
+          MISE_GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ansible-playbook -i tests/inventory-ci.yml site.yml --limit ci --tags mise --skip-tags always | tee second-run-mise.log
+          grep -Eq '^ci +: ok=[0-9]+ +changed=0 ' second-run-mise.log
+
+      - name: Check the mise tools in the login user's shell
+        run: |
+          want() { sed -nE "s/^$1: *\"?([^\"]+)\"?$/\1/p" roles/mise/defaults/main.yml; }
+          install -d -o "$ADMIN_USER" -g "$ADMIN_USER" /tmp/mise-check
+          su - "$ADMIN_USER" -c "bash -s -- /tmp/mise-check $(want mise_version) $(want '  ruby') $(want mise_rails_version) \
+            $(want '  python') $(want '  node') $(want '  go')" < tests/check-mise.sh

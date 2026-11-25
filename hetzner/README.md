@@ -133,6 +133,7 @@ After a rebuild, run the whole `site.yml` first.
 |---|---|---|
 | `base` | every server | htop, tmux, unzip; the login banner (`/etc/update-motd.d/99-figlet`): figlet with the server's console name, then `base_motd_greeting` (`group_vars/all.yml`) as a plain line. On `toolbox` servers also `base_extra_packages`: Emacs (`emacs-nox`) |
 | `haskell` | `toolbox` servers | GHC, Cabal, Stack and HLS through ghcup, in `admin_user`'s home: ghcup's Recommended versions, set in `roles/haskell/defaults/main.yml` (change one there to upgrade). Stack gets each GHC it needs from ghcup (its hook). The PATH goes in `~/.profile`, and the build libraries come from apt. The first run downloads about 0.5 GB |
+| `mise` | `toolbox` servers | mise (the official release binary, checked by SHA-256) in `admin_user`'s `~/.local/bin`, and through it Ruby with Rails, Python, Node and Go: the versions in `roles/mise/defaults/main.yml` (`mise_tools`, change one there to upgrade), written to the global `~/.config/mise/config.toml`. Projects pick their own versions in their `mise.toml` (or `.ruby-version`, `.python-version`, `.nvmrc`). mise's shims go on the PATH in `~/.profile`, and `mise activate` goes in `~/.bashrc`. If mise's GitHub API calls hit the hourly limit, set `MISE_GITHUB_TOKEN` on this machine before the run |
 
 ## Tests
 
@@ -142,7 +143,8 @@ Every push that changes this folder runs [the tests](../.github/workflows/hetzne
 - **container:** a fresh `ubuntu:26.04` gets the control machine's setup from this README, then the role `base` twice (the second
   run must change nothing); the cloud-config is rendered for a dev and a prod server and checked against cloud-init's schema. Then a
   user is made the way the cloud-config makes `admin_user`, and each toolbox role runs twice for it. The tools are then checked in
-  that user's login shell (for `haskell`: the versions, a compiled program, HLS on it, and Stack taking ghcup's GHC).
+  that user's login shell (for `haskell`: the versions, a compiled program, HLS on it, and Stack taking ghcup's GHC; for `mise`:
+  the versions, Ruby's and Python's own libraries, a minimal Rails app, small Node and Go programs, and mise in interactive shells).
 
 The results are on the repo's Actions tab, and the badge above shows the last one. Each new role gets its test there before it runs
 on a server.

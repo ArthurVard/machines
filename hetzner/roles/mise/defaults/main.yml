@@ -1,0 +1,41 @@
+---
+# Role "mise": Ruby with Rails, Python, Node and Go through mise, for the login user, on the development servers (x86_64).
+#
+# The versions are the newest stable releases (checked 2026-11-25); Node's is the Active LTS. To upgrade one, change it here: the
+# next run installs it and makes it the global default. Older versions stay until "mise prune". Each project can pick its own
+# versions in its mise.toml (or in .ruby-version, .python-version, .nvmrc).
+
+# mise itself: the official release binary, checked against its SHA-256 (GitHub's record of the release file).
+mise_version: "2026.11.14"
+mise_sha256: 6fa596291e9758106f761fea4f8e7fac6c3e7ff4714d5c0b9a76e16068db14f6
+
+# The global versions (~/.config/mise/config.toml, written by this role).
+mise_tools:
+  ruby: "4.0.10"
+  python: "3.15.2"
+  node: "26.13.1"
+  go: "1.27.4"
+
+# Rails, installed with gem into the global Ruby. Not through mise's gem: backend: its own GEM_HOME would also catch the gems that
+# "rails new" installs for an app.
+mise_rails_version: "8.1.4.1"
+
+# The tools whose usual version files (.ruby-version, .python-version, .nvmrc) mise reads in projects; mise ignores them by default.
+mise_idiomatic_version_files:
+  - ruby
+  - python
+  - node
+
+# Gems with C extensions (some of Rails's dependencies) need a compiler; pkg-config lets them find the libraries that the
+# precompiled Ruby bundles.
+mise_packages:
+  - build-essential
+  - pkg-config
+
+# mise's GitHub API calls (Ruby's and Python's builds, and their attestations) are limited per hour without a token. If
+# MISE_GITHUB_TOKEN is set on the control machine, it goes to mise on the server; CI sets its own. Leave it unset otherwise:
+# mise reads an empty value as no token.
+mise_github_token: "{{ lookup('ansible.builtin.env', 'MISE_GITHUB_TOKEN') }}"
+
+# Who gets the tools, in their home: the login user.
+mise_user: "{{ admin_user }}"

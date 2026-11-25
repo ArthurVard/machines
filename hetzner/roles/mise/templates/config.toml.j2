@@ -1,0 +1,9 @@
+# Your global mise config. Managed by Ansible (role "mise"): the next run overwrites changes made here. Change the versions in the
+# role (mise_tools), or pick them per project in its mise.toml.
+[tools]
+{% for tool, version in mise_tools.items() %}
+{{ tool | to_json }} = {{ version | string | to_json }}
+{% endfor %}
+
+[settings]
+idiomatic_version_file_enable_tools = {{ mise_idiomatic_version_files | to_json }}

@@ -1,0 +1,108 @@
+---
+# Role "mise": Ruby with Rails, Python, Node and Go through mise, for the login user (development servers only).
+# Only the build packages need root. Everything else goes into the user's home and is installed as that user. mise checks each
+# tool's download (Ruby's and Python's by their GitHub attestations, Node's by its signed SHASUMS256.txt, Go's by its .sha256).
+# A second run changes nothing.
+
+- name: Install what gems with C extensions need
+  ansible.builtin.apt:
+    name: "{{ mise_packages }}"
+    state: present
+    cache_valid_time: 3600            # refresh the package list if it's older than an hour
+  become: true
+
+- name: Find the home folder of {{ mise_user }}
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ mise_user }}"
+
+- name: Install the tools as {{ mise_user }}
+  become: true
+  become_user: "{{ mise_user }}"
+  vars:
+    mise_home: "{{ ansible_facts.getent_passwd[mise_user][4] }}"
+    mise_bin: "{{ mise_home }}/.local/bin/mise"
+  block:
+    - name: Make the folders for mise and its config
+      ansible.builtin.file:
+        path: "{{ mise_home }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - .local/bin
+        - .config/mise
+
+    # Where mise's own installer puts it. Ubuntu's ~/.profile puts ~/.local/bin on the PATH.
+    - name: Download mise {{ mise_version }}
+      ansible.builtin.get_url:
+        url: "https://github.com/jdx/mise/releases/download/v{{ mise_version }}/mise-v{{ mise_version }}-linux-x64"
+        checksum: "sha256:{{ mise_sha256 }}"
+        dest: "{{ mise_bin }}"
+        mode: "0755"
+
+    - name: Write the global mise config
+      ansible.builtin.template:
+        src: config.toml.j2
+        dest: "{{ mise_home }}/.config/mise/config.toml"
+        mode: "0644"
+
+    # From the home folder, so only the global config counts. Read-only, so it runs in --check too.
+    # Exit code 0: everything is installed; 1: something is missing. Anything else is an error, except in --check on a new
+    # server, where mise isn't downloaded yet.
+    - name: Ask mise whether a version is missing
+      ansible.builtin.command:
+        argv: ["{{ mise_bin }}", install, --dry-run-code]
+        chdir: "{{ mise_home }}"
+      environment:
+        MISE_GITHUB_TOKEN: "{{ mise_github_token }}"
+      register: mise_missing
+      changed_when: false
+      failed_when: mise_missing.rc not in [0, 1] and not ansible_check_mode
+      check_mode: false
+
+    - name: Install the missing versions
+      ansible.builtin.command:
+        argv: ["{{ mise_bin }}", install]
+        chdir: "{{ mise_home }}"
+      environment:
+        MISE_GITHUB_TOKEN: "{{ mise_github_token }}"
+      when: mise_missing.rc == 1
+      changed_when: true
+
+    # Exit code 0: the global Ruby has that Rails. Read-only, so it runs in --check too.
+    - name: Ask whether the global Ruby has Rails {{ mise_rails_version }}
+      ansible.builtin.command:
+        argv: ["{{ mise_bin }}", exec, --, ruby, -e, "gem 'rails', '= {{ mise_rails_version }}'"]
+        chdir: "{{ mise_home }}"
+      register: mise_rails
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Install Rails {{ mise_rails_version }}
+      ansible.builtin.command:
+        argv: ["{{ mise_bin }}", exec, --, gem, install, rails, --version, "{{ mise_rails_version }}", --no-document]
+        chdir: "{{ mise_home }}"
+      when: mise_rails.rc != 0
+      changed_when: true
+
+    # mise's recommended pair: shims for login shells and VS Code's remote server, full activation in interactive shells.
+    - name: Put mise's shims on the PATH (~/.profile)
+      ansible.builtin.blockinfile:
+        path: "{{ mise_home }}/.profile"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK: role mise"
+        block: |
+          # mise's shims: the tools in your global mise config and in your projects' mise.toml
+          eval "$("$HOME/.local/bin/mise" activate bash --shims)"
+        create: true
+        mode: "0644"
+
+    - name: Let mise follow you between projects in interactive shells (~/.bashrc)
+      ansible.builtin.blockinfile:
+        path: "{{ mise_home }}/.bashrc"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK: role mise"
+        block: |
+          # mise: tool versions and each project's [env] follow you as you cd
+          eval "$("$HOME/.local/bin/mise" activate bash)"
+        create: true
+        mode: "0644"
