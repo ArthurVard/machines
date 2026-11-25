@@ -1,6 +1,6 @@
 ---
 # Tests for the Hetzner kit (hetzner/), on every push or pull request that changes it. They need no server and no token.
-# - lint: the syntax check and ansible-lint.
+# - lint: the syntax check and ansible-lint, on the Ansible that hetzner/README.md installs.
 # - container: a fresh Ubuntu 26.04 gets the control machine's setup from hetzner/README.md, then the role "base" twice (the
 #   second run must change nothing). The cloud-config is rendered for a dev and a prod server and checked against cloud-init's
 #   schema.
@@ -34,18 +34,29 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Ansible, the collection and ansible-lint
+      # The runner image has its own Ansible in pipx (ansible-core, with ansible injected), and pipx won't replace its commands
+      # unless forced. --force points them at ours, so the checks run on the Ansible the README installs. ansible-lint goes into
+      # the same environment, so it lints against the same ansible-core and collection.
+      - name: Install Ansible and the collection as the README says, and ansible-lint next to them
         run: |
-          pipx install --include-deps ansible
+          pipx install --force --include-deps ansible
           pipx inject ansible requests python-dateutil
+          pipx inject --include-apps ansible ansible-lint
           ansible-galaxy collection install -r requirements.yml
-          pipx install ansible-lint
+
+      - name: Show the versions under test
+        run: |
+          ansible-community --version
+          ansible --version
+          ansible-galaxy collection list hetzner.hcloud
+          ansible-lint --offline --version
 
       - name: Syntax check
         run: ansible-playbook -i tests/inventory-ci.yml rebuild.yml site.yml --syntax-check
 
+      # --offline: no download from Galaxy and no schema refresh from GitHub (rate-limited on shared runners).
       - name: ansible-lint
-        run: ansible-lint
+        run: ansible-lint --offline
 
   container:
     name: Role base and the cloud-config on a fresh Ubuntu 26.04
@@ -75,6 +86,9 @@ jobs:
           pipx install --include-deps ansible
           pipx inject ansible requests python-dateutil
           ansible-galaxy collection install -r requirements.yml
+          ansible-community --version
+          ansible --version
+          ansible-galaxy collection list hetzner.hcloud
 
       - name: A throwaway key in place of the servers key, for the cloud-config's key lookup
         run: |
