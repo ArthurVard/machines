@@ -3,7 +3,8 @@
 # - lint: the syntax check and ansible-lint, on the Ansible that hetzner/README.md installs.
 # - container: a fresh Ubuntu 26.04 gets the control machine's setup from hetzner/README.md, then the role "base" twice (the
 #   second run must change nothing). The cloud-config is rendered for a dev and a prod server and checked against cloud-init's
-#   schema.
+#   schema. Then the login user is made as the cloud-config makes it, and each toolbox role runs twice for it, then gets checked
+#   in that user's login shell.
 name: hetzner kit
 
 "on":
@@ -59,9 +60,9 @@ jobs:
         run: ansible-lint --offline
 
   container:
-    name: Role base and the cloud-config on a fresh Ubuntu 26.04
+    name: The roles and the cloud-config on a fresh Ubuntu 26.04
     runs-on: ubuntu-26.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     container: ubuntu:26.04
     defaults:
       run:
@@ -123,3 +124,30 @@ jobs:
           grep -q 'ssh-ed25519 ' /tmp/cloud-init-ci.yaml
           grep -q '^swap:' /tmp/cloud-init-ci.yaml
           if grep -q '^swap:' /tmp/cloud-init-ci-prod.yaml; then echo "prod got a swap file"; exit 1; fi
+
+      # --- The toolbox roles: they install into the login user's home ---
+
+      - name: Make the login user (admin_user), as the cloud-config does
+        run: |
+          user=$(sed -nE 's/^admin_user: *"?([a-z_][a-z0-9_-]*)"?$/\1/p' group_vars/all.yml)
+          test -n "$user"
+          useradd --create-home --shell /bin/bash --groups sudo "$user"
+          echo "$user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-cloud-init-users
+          chmod 0440 /etc/sudoers.d/90-cloud-init-users
+          echo "ADMIN_USER=$user" >> "$GITHUB_ENV"
+
+      - name: Role haskell, first run
+        run: ansible-playbook -i tests/inventory-ci.yml site.yml --limit ci --tags haskell --skip-tags always
+
+      - name: Role haskell, second run (it must change nothing)
+        run: |
+          ansible-playbook -i tests/inventory-ci.yml site.yml --limit ci --tags haskell --skip-tags always | tee second-run-haskell.log
+          grep -Eq '^ci +: ok=[0-9]+ +changed=0 ' second-run-haskell.log
+
+      - name: Check the Haskell tools in the login user's shell
+        run: |
+          want() { sed -nE "s/^haskell_$1_version: *\"?([^\"]+)\"?$/\1/p" roles/haskell/defaults/main.yml; }
+          install -d -o "$ADMIN_USER" -g "$ADMIN_USER" /tmp/haskell-check
+          install -o "$ADMIN_USER" -g "$ADMIN_USER" -m 0644 tests/Hello.hs /tmp/haskell-check/
+          su - "$ADMIN_USER" -c "bash -s -- /tmp/haskell-check $(want ghc) $(want cabal) $(want stack) $(want hls)" \
+            < tests/check-haskell.sh

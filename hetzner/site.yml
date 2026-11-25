@@ -1,10 +1,11 @@
 ---
 # Safe to re-run: brings the servers to the wanted state, then checks it.
 # 1. The base system: the Hetzner Cloud Firewall, a reboot if the package upgrade needs one, and checks.
-# 2. The roles, each tagged with its name: "base" on every server; the development servers' toolbox comes one role at a time.
+# 2. The roles, each tagged with its name: "base" on every server; the development servers (group toolbox) get the toolbox,
+#    one role at a time ("haskell" so far).
 #
-#   ansible-playbook site.yml --limit dev               # everything
-#   ansible-playbook site.yml --limit dev --tags base   # one role (plus the checks and waits tagged "always")
+#   ansible-playbook site.yml --limit dev                  # everything
+#   ansible-playbook site.yml --limit dev --tags haskell   # one role (plus the checks and waits tagged "always")
 
 - name: Base system
   hosts: servers
@@ -159,3 +160,10 @@
   roles:
     - role: base
       tags: [base]
+
+- name: The development toolbox
+  hosts: toolbox
+  gather_facts: false
+  roles:
+    - role: haskell
+      tags: [haskell]

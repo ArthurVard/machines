@@ -1,0 +1,45 @@
+---
+# Role "haskell": GHC, Cabal, Stack and HLS through ghcup, for the login user, on the development servers (x86_64).
+#
+# The versions are ghcup's "Recommended" set (checked 2026-11-25). To upgrade one, change it here: the next run installs it and
+# makes it the default. Older versions stay until you remove them (ghcup rm). A version you switch to by hand (ghcup set) stays.
+
+# ghcup itself: the release's Linux binary, checked against its SHA-256 (ghcup's metadata and GitHub's release record agree).
+haskell_ghcup_version: "0.2.6.2"
+haskell_ghcup_sha256: 9ed5da5449b48043a0d17e767c05d2ef585e25a639bb934329496c6d2fad9cf8
+
+# The tools ghcup installs, each made the default version when it's installed.
+haskell_ghc_version: "9.10.3"
+haskell_cabal_version: "3.16.1.0"
+haskell_stack_version: "3.11.1"
+haskell_hls_version: "2.14.0.0"
+
+haskell_tools:
+  - {tool: ghc, version: "{{ haskell_ghc_version }}"}
+  - {tool: cabal, version: "{{ haskell_cabal_version }}"}
+  - {tool: stack, version: "{{ haskell_stack_version }}"}
+  - {tool: hls, version: "{{ haskell_hls_version }}"}
+
+# Stack's GHCup hook: whenever Stack needs a GHC, it asks ghcup instead of downloading its own copy.
+# Pinned to the commit that last changed it (2024-10-07; the same file as in ghcup 0.2.6.2), with its SHA-256.
+haskell_stack_hook_commit: 88ee540e5fbb269051b6bf95d812aad42a703132
+haskell_stack_hook_sha256: a120b411014dbdd4610d7e6d5527a315a8b372c51623bed2ef7da4d00c329b45
+
+# What GHC needs to build programs (apt):
+# - ghcup's list for Ubuntu 23 and newer, without libffi8ubuntu1 (Ubuntu 26.04 has only libffi8, which libffi-dev brings) and
+#   libgmp10 (libgmp-dev brings it);
+# - pkg-config, from ghcup's Debian list: cabal finds C libraries with it;
+# - zlib1g-dev and libnuma-dev, from the official Haskell Docker image's list.
+# A project's own C libraries don't belong here.
+haskell_packages:
+  - build-essential
+  - curl
+  - libffi-dev
+  - libgmp-dev
+  - libncurses-dev
+  - libnuma-dev
+  - pkg-config
+  - zlib1g-dev
+
+# Who gets the toolchain, in their home: the login user.
+haskell_user: "{{ admin_user }}"

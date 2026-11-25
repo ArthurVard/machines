@@ -1,0 +1,87 @@
+---
+# Role "haskell": GHC, Cabal, Stack and HLS through ghcup, for the login user (development servers only).
+# Only the build libraries need root. Everything else goes into the user's home and is installed as that user, as ghcup's own
+# installer does. A second run changes nothing.
+
+- name: Install what GHC needs to build programs
+  ansible.builtin.apt:
+    name: "{{ haskell_packages }}"
+    state: present
+    cache_valid_time: 3600            # refresh the package list if it's older than an hour
+  become: true
+
+- name: Find the home folder of {{ haskell_user }}
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ haskell_user }}"
+
+- name: Install the toolchain as {{ haskell_user }}
+  become: true
+  become_user: "{{ haskell_user }}"
+  vars:
+    haskell_home: "{{ ansible_facts.getent_passwd[haskell_user][4] }}"
+    haskell_ghcup: "{{ haskell_home }}/.ghcup/bin/ghcup"
+  block:
+    # ~/.cabal, empty, as ghcup's installer makes it: Cabal then keeps its classic layout, so cabal install puts programs in
+    # ~/.cabal/bin (on the PATH below).
+    - name: Make the folders for ghcup, Stack's hook and Cabal
+      ansible.builtin.file:
+        path: "{{ haskell_home }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - .ghcup/bin
+        - .stack/hooks
+        - .cabal
+
+    - name: Download ghcup {{ haskell_ghcup_version }}
+      ansible.builtin.get_url:
+        url: "https://downloads.haskell.org/~ghcup/{{ haskell_ghcup_version }}/x86_64-linux-ghcup-{{ haskell_ghcup_version }}"
+        checksum: "sha256:{{ haskell_ghcup_sha256 }}"
+        dest: "{{ haskell_ghcup }}"
+        mode: "0755"
+
+    # Read-only, so it runs in --check too. Exit code 0: that version is installed. Anything else (30: not installed; or no
+    # ghcup, or no metadata cached yet, on a first run) means the next task installs it.
+    - name: Ask ghcup which of the versions are installed
+      ansible.builtin.command:
+        argv: ["{{ haskell_ghcup }}", --offline, whereis, "{{ item.tool }}", "{{ item.version }}"]
+      loop: "{{ haskell_tools }}"
+      loop_control:
+        label: "{{ item.tool }} {{ item.version }}"
+      register: haskell_whereis
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    # ghcup checks each download against the SHA-256 in its metadata. --set makes the new version the default.
+    - name: Install the missing versions, each as the default
+      ansible.builtin.command:
+        argv: ["{{ haskell_ghcup }}", install, "{{ item.item.tool }}", --set, "{{ item.item.version }}"]
+      environment:
+        GHCUP_SKIP_UPDATE_CHECK: "yes"
+      loop: "{{ haskell_whereis.results }}"
+      loop_control:
+        label: "{{ item.item.tool }} {{ item.item.version }}"
+      when: item.rc | default(1) != 0
+      register: haskell_install
+      changed_when: "'already installed' not in (haskell_install.stderr | default(''))"
+
+    - name: Download Stack's GHCup hook
+      ansible.builtin.get_url:
+        url: "https://raw.githubusercontent.com/haskell/ghcup-hs/{{ haskell_stack_hook_commit }}/scripts/hooks/stack/ghc-install.sh"
+        checksum: "sha256:{{ haskell_stack_hook_sha256 }}"
+        dest: "{{ haskell_home }}/.stack/hooks/ghc-install.sh"
+        mode: "0755"
+
+    # In ~/.profile, not ~/.bashrc: login shells and VS Code's remote server read it, and Ubuntu's ~/.bashrc stops early in
+    # non-interactive shells.
+    - name: Put ghcup's tools and Cabal's programs on the PATH
+      ansible.builtin.blockinfile:
+        path: "{{ haskell_home }}/.profile"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK: role haskell"
+        block: |
+          # GHC, Cabal, Stack and HLS (ghcup), and the programs that cabal install puts in ~/.cabal/bin
+          export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH"
+        create: true
+        mode: "0644"

@@ -27,7 +27,7 @@ tools. A development server also gets a toolbox of languages, added one role at 
 | `site.yml` | the firewall, a reboot if updates need one, the checks, then the roles |
 | `roles/<role>/` | one folder per role ("The roles" below) |
 | `requirements.yml` | the Ansible collection this needs |
-| `.ansible-lint`, `tests/inventory-ci.yml` | the tests' settings and inventory ("Tests" below) |
+| `.ansible-lint`, `tests/` | the tests' settings, their inventory and the checks they run ("Tests" below) |
 
 ## Once: the control machine
 
@@ -132,6 +132,7 @@ After a rebuild, run the whole `site.yml` first.
 | Role (its tag) | Runs on | What it sets up |
 |---|---|---|
 | `base` | every server | htop, tmux, unzip; the login banner (`/etc/update-motd.d/99-figlet`): figlet with the server's console name, then `base_motd_greeting` (`group_vars/all.yml`) as a plain line. On `toolbox` servers also `base_extra_packages`: Emacs (`emacs-nox`) |
+| `haskell` | `toolbox` servers | GHC, Cabal, Stack and HLS through ghcup, in `admin_user`'s home: ghcup's Recommended versions, set in `roles/haskell/defaults/main.yml` (change one there to upgrade). Stack gets each GHC it needs from ghcup (its hook). The PATH goes in `~/.profile`, and the build libraries come from apt. The first run downloads about 0.5 GB |
 
 ## Tests
 
@@ -139,7 +140,9 @@ Every push that changes this folder runs [the tests](../.github/workflows/hetzne
 
 - **lint:** `ansible-playbook --syntax-check` and `ansible-lint` (profile `production`, settings in `.ansible-lint`);
 - **container:** a fresh `ubuntu:26.04` gets the control machine's setup from this README, then the role `base` twice (the second
-  run must change nothing); the cloud-config is rendered for a dev and a prod server and checked against cloud-init's schema.
+  run must change nothing); the cloud-config is rendered for a dev and a prod server and checked against cloud-init's schema. Then a
+  user is made the way the cloud-config makes `admin_user`, and each toolbox role runs twice for it. The tools are then checked in
+  that user's login shell (for `haskell`: the versions, a compiled program, HLS on it, and Stack taking ghcup's GHC).
 
 The results are on the repo's Actions tab, and the badge above shows the last one. Each new role gets its test there before it runs
 on a server.
